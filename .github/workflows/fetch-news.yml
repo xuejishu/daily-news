@@ -11,16 +11,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: 'pip'
 
       - name: Install dependencies
         run: pip install feedparser beautifulsoup4 requests
 
       - name: Fetch news and send to Feishu
-        run: python fetch_news.py
+        timeout-minutes: 10
+        run: |
+          set -e
+          pip list 2>/dev/null | grep -iE "feedparser|beautifulsoup|requests" || true
+          python fetch_news.py 2>&1
+          echo "---"
+          echo "HTML output:"
+          cat daily_news.html | head -5
         env:
           FEISHU_WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
