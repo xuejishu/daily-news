@@ -2,81 +2,75 @@
 # -*- coding: utf-8 -*-
 """
 Daily World News Digest
-Fetches news from RSS feeds, generates HTML page, and sends to Feishu.
+Fetches news from RSS feeds using feedparser, generates HTML page, and sends to Feishu.
 """
 
-import json
 import os
 import sys
 import datetime
 import re
 from urllib.request import urlopen, Request
-from xml.etree import ElementTree
-import html as html_module
+import feedparser
+import html
 
-# RSS Feeds
+# RSS Feeds - using feeds that are accessible and stable
 RSS_FEEDS = [
     # English
     ("BBC News", "https://feeds.bbci.co.uk/news/rss.xml"),
-    ("BBC Chinese", "https://feeds.bbci.co.uk/zhongwen/simp/rss.xml"),
-    ("RSSHub Google News World", "https://rsshub.rssforever.com/https://news.google.com/rss?hl=zh-CN&gl=CN&ceid=CN:zh-Hans"),
-    ("RSSHub 36kr", "https://rsshub.rssforever.com/36kr/newsflashes"),
-    ("RSSHub 澎湃新闻", "https://rsshub.rssforever.com/thepaper/channel/310"),
-    ("RSSHub FT中文网", "https://rsshub.rssforever.com/ft/chinese"),
     ("Al Jazeera", "https://www.aljazeera.com/rss/"),
-    ("DW", "https://www.dw.com/en/top-stories/rss"),
+    ("DW", "https://rss.dw.com/xml/rss-chi-all"),
+    ("Reuters", "https://rsshub.rssforever.com/reuters/reutersWorld"),
+    ("The Guardian", "https://rsshub.rssforever.com/theguardian/world"),
+    # Chinese
+    ("BBC中文", "https://feeds.bbci.co.uk/zhongwen/simp/rss.xml"),
+    ("36氪", "https://rsshub.rssforever.com/36kr/newsflashes"),
+    ("澎湃新闻", "https://rsshub.rssforever.com/thepaper/channel/310"),
 ]
 
 MAX_NEWS = 10
 
 
 def parse_rss_feed(url, source_name):
-    """Parse an RSS feed and return articles"""
+    """Parse an RSS feed using feedparser"""
     try:
         req = Request(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"})
-        response = urlopen(req, timeout=10)
+        response = urlopen(req, timeout=15)
         xml_data = response.read()
-        root = ElementTree.fromstring(xml_data)
+
+        feed = feedparser.parse(xml_data)
 
         articles = []
-        items = root.findall(".//item")
-        if not items:
-            items = root.findall(".//entry")
+        for entry in feed.entries[:15]:
+            title = entry.get("title", "").strip()
+            link = entry.get("link", "")
+            summary = entry.get("summary", "")
 
-        for item in items[:15]:
-            title = item.findtext("title", "")
-            link = item.findtext("link", "")
-            description = item.findtext("description", "")
-            pub_date = item.findtext("pubDate", "")
+            # Clean summary
+            if summary:
+                desc = re.sub(r"<[^>]+>", "", summary).strip()
+                desc = re.sub(r"\s+", " ", desc)
+                if len(desc) > 200:
+                    desc = desc[:200] + "..."
+            else:
+                desc = ""
+
+            # Try to get image from summary or media
             image = ""
-
-            # Try to extract image
-            content = item.find("content://url")
-            if content is None:
-                content = item.find(".//{http://search.yahoo.com/mrss/}content")
-            if content is not None:
-                image = content.get("url", "")
-
-            if not image:
-                img_match = re.search(r'<img[^>]+src="([^"]+)"', description)
+            if summary:
+                img_match = re.search(r'<img[^>]+src="([^"]+)"', summary)
                 if img_match:
                     image = img_match.group(1)
-
-            # Clean description
-            if description:
-                desc_clean = re.sub(r"<[^>]+>", "", description).strip()
-                desc_clean = re.sub(r"\s+", " ", desc_clean)
-                if len(desc_clean) > 200:
-                    desc_clean = desc_clean[:200] + "..."
-            else:
-                desc_clean = ""
+            if not image:
+                media = entry.get("media_content", [])
+                if media:
+                    image = media[0].get("url", "")
 
             if title:
                 articles.append({
-                    "title": title.strip(),
+                    "title": title,
                     "link": link,
-                    "description": desc_clean,
-                    "pub_date": pub_date,
+                    "description": desc,
+                    "pub_date": entry.get("published", entry.get("updated", "")),
                     "image": image,
                     "source": source_name,
                 })
@@ -142,9 +136,9 @@ def generate_html(articles, output_file):
             <div class="news-content">
                 <div class="news-header">
                     <span class="source-badge {source_class}">{article['source']}</span>
-                    <h2><a href="{article['link']}" target="_blank">{html_module.escape(article['title'])}</a></h2>
+                    <h2><a href="{article['link']}" target="_blank">{html.escape(article['title'])}</a></h2>
                 </div>
-                <p class="news-summary">{html_module.escape(article.get('description', ''))}</p>
+                <p class="news-summary">{html.escape(article.get('description', ''))}</p>
                 <div class="news-footer">
                     <span class="news-time">{article.get('pub_date', '')}</span>
                     <a href="{article['link']}" target="_blank" class="read-more">阅读全文 →</a>
