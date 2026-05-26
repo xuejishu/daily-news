@@ -17,15 +17,14 @@ import html as html_module
 # RSS Feeds
 RSS_FEEDS = [
     # English
-    ("Reuters", "https://www.rss.reuters.com/news/world"),
-    ("BBC", "http://feeds.bbci.co.uk/news/world/rss.xml"),
-    ("CNN", "http://rss.cnn.com/rss/edition.rss"),
-    ("The Guardian", "https://www.theguardian.com/world/rss"),
-    ("NYT", "http://rss.nytimes.com/services/xml/rss/nyt/World.xml"),
-    # Chinese
-    ("CGTN", "https://news.cgtn.com/resource/rss/rss_en.xml"),
-    ("China Daily", "http://www.chinadaily.com.cn/rss/chinadaily_rss.xml"),
-    ("Sina News", "http://feed.news.sina.com.cn/feed/rollpicks/rss.xml"),
+    ("BBC News", "https://feeds.bbci.co.uk/news/rss.xml"),
+    ("BBC Chinese", "https://feeds.bbci.co.uk/zhongwen/simp/rss.xml"),
+    ("RSSHub Google News World", "https://rsshub.rssforever.com/https://news.google.com/rss?hl=zh-CN&gl=CN&ceid=CN:zh-Hans"),
+    ("RSSHub 36kr", "https://rsshub.rssforever.com/36kr/newsflashes"),
+    ("RSSHub 澎湃新闻", "https://rsshub.rssforever.com/thepaper/channel/310"),
+    ("RSSHub FT中文网", "https://rsshub.rssforever.com/ft/chinese"),
+    ("Al Jazeera", "https://www.aljazeera.com/rss/"),
+    ("DW", "https://www.dw.com/en/top-stories/rss"),
 ]
 
 MAX_NEWS = 10
