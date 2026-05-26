@@ -1,9 +1,0 @@
-services:
-  - type: web
-    name: daily-news
-    env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: cd news-site && python server.py
-    envVars:
-      - key: PORT
-        value: 10000

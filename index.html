@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全球新闻热点</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #f5f5f5; color: #333; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px 0; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .header-content { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+        .header h1 { font-size: 24px; margin-bottom: 15px; }
+        .search-box { display: flex; gap: 10px; }
+        .search-box input { flex: 1; padding: 10px 15px; border: none; border-radius: 8px; font-size: 14px; outline: none; }
+        .search-box button { padding: 10px 20px; background: rgba(255,255,255,0.2); border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 14px; }
+        .search-box button:hover { background: rgba(255,255,255,0.3); }
+        .categories { background: white; padding: 15px 0; border-bottom: 1px solid #eee; overflow-x: auto; }
+        .categories-content { max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; gap: 10px; }
+        .category-btn { padding: 8px 20px; border: 2px solid #667eea; background: white; color: #667eea; border-radius: 20px; cursor: pointer; font-size: 14px; white-space: nowrap; transition: all 0.3s; }
+        .category-btn:hover, .category-btn.active { background: #667eea; color: white; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .news-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
+        .news-card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: transform 0.3s, box-shadow 0.3s; cursor: pointer; }
+        .news-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.15); }
+        .news-image { width: 100%; height: 200px; object-fit: cover; background: #e0e0e0; }
+        .news-body { padding: 15px; }
+        .news-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 12px; color: #999; }
+        .news-source { background: #667eea; color: white; padding: 3px 10px; border-radius: 12px; font-size: 11px; }
+        .news-title { font-size: 16px; line-height: 1.5; margin-bottom: 10px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .news-summary { font-size: 14px; color: #666; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+        .loading { text-align: center; padding: 50px; color: #999; }
+        .loading-spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 15px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .no-results { text-align: center; padding: 50px; color: #999; font-size: 16px; }
+        .status-bar { text-align: center; padding: 10px; color: #999; font-size: 12px; }
+        @media (max-width: 768px) { .news-grid { grid-template-columns: 1fr; } .header h1 { font-size: 20px; } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1>📰 全球新闻热点</h1>
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="搜索新闻...">
+                <button onclick="searchNews()">搜索</button>
+            </div>
+        </div>
+    </div>
+    <div class="categories">
+        <div class="categories-content" id="categories">
+            <button class="category-btn active" data-category="all">全部</button>
+            <button class="category-btn" data-category="hot">🔥 热点</button>
+            <button class="category-btn" data-category="finance">💰 财经</button>
+            <button class="category-btn" data-category="tech">💻 科技</button>
+            <button class="category-btn" data-category="military">🎖️ 军事</button>
+            <button class="category-btn" data-category="game">🎮 游戏</button>
+            <button class="category-btn" data-category="world">🌍 国际</button>
+            <button class="category-btn" data-category="sports">⚽ 体育</button>
+        </div>
+    </div>
+    <div class="container">
+        <div class="news-grid" id="newsGrid">
+            <div class="loading">
+                <div class="loading-spinner"></div>
+                <div>正在加载新闻...</div>
+            </div>
+        </div>
+    </div>
+    <div class="status-bar" id="statusBar"></div>
+
+    <script>
+        let allNews = [];
+        let currentCategory = 'all';
+        let currentSearch = '';
+
+        const RSS_HUB_URL = 'https://rsshub.app';
+
+        const SOURCES = {
+            hot: [{name:'今日头条',url:`${RSS_HUB_URL}/toutiao/hotlist`},{name:'新浪热榜',url:`${RSS_HUB_URL}/sina/weibo/board/1`}],
+            finance: [{name:'财新网',url:`${RSS_HUB_URL}/caixin/rss`},{name:'华尔街见闻',url:`${RSS_HUB_URL}/wallstreetcn/news/global`}],
+            tech: [{name:'36氪',url:`${RSS_HUB_URL}/36kr/newsflashes`},{name:'TechCrunch',url:`${RSS_HUB_URL}/techcrunch/business`}],
+            military: [{name:'环球网',url:`${RSS_HUB_URL}/huanqiu`},{name:'参考消息',url:`${RSS_HUB_URL}/cankaoxiaoxi/fast`}],
+            game: [{name:'游民星空',url:`${RSS_HUB_URL}/gamersky/news`},{name:'IGN',url:`${RSS_HUB_URL}/ign/anything`}],
+            world: [{name:'BBC中文',url:`${RSS_HUB_URL}/bbchinese/feed`},{name:'Reuters',url:`${RSS_HUB_URL}/reuters/reutersWorld`}],
+            sports: [{name:'虎扑',url:`${RSS_HUB_URL}/hupu/jrs`},{name:'ESPN',url:`${RSS_HUB_URL}/espn/rss`}],
+        };
+
+        function parseRSS(xml) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(xml, 'text/xml');
+            const items = doc.querySelectorAll('item, entry');
+            const articles = [];
+            items.forEach((item, i) => {
+                if (i >= 10) return;
+                const title = item.querySelector('title')?.textContent?.trim() || '';
+                const link = item.querySelector('link, url')?.textContent || '';
+                const desc = (item.querySelector('description, summary, content')?.textContent || '').replace(/<[^>]+>/g,'').trim().substring(0,200);
+                const imgMatch = (item.querySelector('description, summary')?.textContent || '').match(/<img[^>]+src="([^"]+)"/);
+                const time = item.querySelector('pubDate, updated')?.textContent || '';
+                if (title) articles.push({title, link, summary:desc, image: imgMatch ? imgMatch[1] : '', time, source: ''});
+            });
+            return articles;
+        }
+
+        async function fetchFromSource(name, url) {
+            try {
+                const resp = await fetch(url, {cache:'no-store'});
+                const xml = await resp.text();
+                const articles = parseRSS(xml);
+                articles.forEach(a => a.source = name);
+                return articles;
+            } catch (e) { console.warn(`Failed: ${name}`, e); return []; }
+        }
+
+        async function fetchAllNews() {
+            const promises = [];
+            for (const cat in SOURCES) {
+                SOURCES[cat].forEach(src => {
+                    promises.push(fetchFromSource(src.name, src.url).then(articles => {
+                        articles.forEach(a => a.category = cat);
+                        return articles;
+                    }));
+                });
+            }
+            const results = await Promise.all(promises);
+            return results.flat();
+        }
+
+        async function loadNews() {
+            const grid = document.getElementById('newsGrid');
+            grid.innerHTML = '<div class="loading"><div class="loading-spinner"></div><div>正在加载新闻...</div></div>';
+            try {
+                allNews = await fetchAllNews();
+                filterAndRender();
+                document.getElementById('statusBar').textContent = `已加载 ${allNews.length} 条新闻`;
+            } catch (e) {
+                grid.innerHTML = '<div class="no-results">加载失败，请检查网络连接后刷新页面</div>';
+            }
+        }
+
+        function filterAndRender() {
+            let filtered = allNews;
+            if (currentCategory !== 'all') {
+                filtered = filtered.filter(n => n.category === currentCategory);
+            }
+            if (currentSearch) {
+                const s = currentSearch.toLowerCase();
+                filtered = filtered.filter(n => n.title.toLowerCase().includes(s) || n.summary.toLowerCase().includes(s));
+            }
+            renderNews(filtered);
+        }
+
+        function renderNews(list) {
+            const grid = document.getElementById('newsGrid');
+            if (list.length === 0) { grid.innerHTML = '<div class="no-results">没有找到相关新闻</div>'; return; }
+            grid.innerHTML = list.map(n => `
+                <div class="news-card" onclick="window.open('${n.link}','_blank')">
+                    <img class="news-image" src="${n.image || 'https://via.placeholder.com/400x200?text=No+Image'}" onerror="this.src='https://via.placeholder.com/400x200?text=No+Image'">
+                    <div class="news-body">
+                        <div class="news-meta">
+                            <span class="news-source">${n.source}</span>
+                            <span>${n.time ? new Date(n.time).toLocaleDateString('zh-CN') : ''}</span>
+                        </div>
+                        <h3 class="news-title">${n.title}</h3>
+                        <p class="news-summary">${n.summary || ''}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function searchNews() { currentSearch = document.getElementById('searchInput').value.trim(); filterAndRender(); }
+        document.getElementById('categories').addEventListener('click', e => {
+            if (e.target.classList.contains('category-btn')) {
+                document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                currentCategory = e.target.dataset.category;
+                filterAndRender();
+            }
+        });
+        document.getElementById('searchInput').addEventListener('keypress', e => { if (e.key === 'Enter') searchNews(); });
+
+        loadNews();
+    </script>
+</body>
+</html>
