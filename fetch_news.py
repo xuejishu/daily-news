@@ -1,33 +1,52 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Daily World News Digest
-Fetches news from RSS feeds using feedparser, generates HTML page, and sends to Feishu.
+Daily World News Digest - Simplified Chinese Edition
+Fetches news from RSS feeds, translates English to Chinese, generates HTML page,
+and sends to Feishu webhook as interactive cards with images.
 """
 
 import os
 import sys
 import datetime
 import re
+import json
 from urllib.request import urlopen, Request
+from urllib.parse import quote
 import feedparser
-import html
+import html as html_module
 
-# RSS Feeds - using feeds that are accessible and stable
+
+# RSS Feeds - Chinese sources only
 RSS_FEEDS = [
-    # English
-    ("BBC News", "https://feeds.bbci.co.uk/news/rss.xml"),
-    ("Al Jazeera", "https://www.aljazeera.com/rss/"),
-    ("DW", "https://rss.dw.com/xml/rss-chi-all"),
-    ("Reuters", "https://rsshub.rssforever.com/reuters/reutersWorld"),
-    ("The Guardian", "https://rsshub.rssforever.com/theguardian/world"),
-    # Chinese
+    ("央视新闻", "https://rw2-cctvnews-rss-mbp.pages.dev/rss.xml"),
+    ("新华社", "https://rsshub.app/xinhuanet"),
+    ("澎湃新闻", "https://rsshub.app/thepaper/channel/310"),
     ("BBC中文", "https://feeds.bbci.co.uk/zhongwen/simp/rss.xml"),
-    ("36氪", "https://rsshub.rssforever.com/36kr/newsflashes"),
-    ("澎湃新闻", "https://rsshub.rssforever.com/thepaper/channel/310"),
+    ("36氪", "https://rsshub.app/36kr/newsflashes"),
+    ("界面新闻", "https://rsshub.app/jiemian/channel/41"),
+    ("FT中文网", "https://rsshub.app/ft/chinese"),
 ]
 
 MAX_NEWS = 10
+
+# Free translation API (MyMemory, no API key needed)
+TRANSLATE_API = "https://api.mymemory.translated.net/get?q={}&langpair=en|zh-CN"
+
+
+def translate_text(text):
+    """Translate English text to Simplified Chinese using MyMemory API"""
+    try:
+        url = TRANSLATE_API.format(quote(text))
+        req = Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        response = urlopen(req, timeout=5)
+        data = json.loads(response.read().decode("utf-8"))
+        translated = data.get("responseData", {}).get("translatedText", "")
+        if translated:
+            return translated
+    except Exception:
+        pass
+    return text
 
 
 def parse_rss_feed(url, source_name):
@@ -102,18 +121,29 @@ def curate_top_news(articles, count=MAX_NEWS):
             seen.add(title_key)
             unique.append(article)
 
-    # Balance English and Chinese
-    english = [a for a in unique if not any("\u4e00" <= c <= "\u9fff" for c in a["title"])]
-    chinese = [a for a in unique if any("\u4e00" <= c <= "\u9fff" for c in a["title"])]
+    # Take first N
+    return unique[:count]
 
-    n_en = min(count // 2, len(english))
-    n_zh = min(count - n_en, len(chinese))
 
-    selected = english[:n_en] + chinese[:n_zh]
-    remaining = [a for a in unique if a not in selected]
-    selected.extend(remaining[:count - len(selected)])
+def translate_articles(articles):
+    """Translate English articles to Simplified Chinese"""
+    translated = []
+    for article in articles:
+        title = article["title"]
+        desc = article.get("description", "")
 
-    return selected[:count]
+        # Check if article is in English
+        if not any("\u4e00" <= c <= "\u9fff" for c in title):
+            print(f"  Translating: {title[:50]}...")
+            title = translate_text(title)
+            if desc and not any("\u4e00" <= c <= "\u9fff" for c in desc):
+                desc = translate_text(desc)
+
+        article["title"] = title
+        article["description"] = desc
+        translated.append(article)
+
+    return translated
 
 
 def generate_html(articles, output_file):
@@ -128,17 +158,15 @@ def generate_html(articles, output_file):
         else:
             image_html = '<div class="news-img-placeholder">📰</div>'
 
-        source_class = "source-zh" if any("\u4e00" <= c <= "\u9fff" for c in article["title"]) else "source-en"
-
         cards_html += f"""
         <div class="news-card">
             <div class="news-number">{i}</div>
             <div class="news-content">
                 <div class="news-header">
-                    <span class="source-badge {source_class}">{article['source']}</span>
-                    <h2><a href="{article['link']}" target="_blank">{html.escape(article['title'])}</a></h2>
+                    <span class="source-badge">{article['source']}</span>
+                    <h2><a href="{article['link']}" target="_blank">{html_module.escape(article['title'])}</a></h2>
                 </div>
-                <p class="news-summary">{html.escape(article.get('description', ''))}</p>
+                <p class="news-summary">{html_module.escape(article.get('description', ''))}</p>
                 <div class="news-footer">
                     <span class="news-time">{article.get('pub_date', '')}</span>
                     <a href="{article['link']}" target="_blank" class="read-more">阅读全文 →</a>
@@ -187,9 +215,8 @@ def generate_html(articles, output_file):
         .news-header {{ display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }}
         .source-badge {{
             font-size: 0.75em; padding: 3px 10px; border-radius: 20px; font-weight: 600; white-space: nowrap;
+            background: #e3f2fd; color: #1565c0;
         }}
-        .source-en {{ background: #e3f2fd; color: #1565c0; }}
-        .source-zh {{ background: #fce4ec; color: #c62828; }}
         .news-header h2 {{ font-size: 1.2em; margin: 0; line-height: 1.4; }}
         .news-header h2 a {{ color: #2d3748; text-decoration: none; }}
         .news-header h2 a:hover {{ color: #667eea; }}
@@ -231,7 +258,7 @@ def generate_html(articles, output_file):
 
 
 def send_to_feishu(webhook_url, articles):
-    """Send news to Feishu webhook"""
+    """Send news to Feishu webhook using interactive card format"""
     if not webhook_url:
         print("Warning: No FEISHU_WEBHOOK set. Skipping notification.")
         return
@@ -239,34 +266,45 @@ def send_to_feishu(webhook_url, articles):
     try:
         import requests
 
-        # Build title lines for each news item
-        lines = [f"📰 每日世界新闻 - {datetime.date.today()}\n"]
+        elements = []
+
+        # Header
+        elements.append({
+            "tag": "markdown",
+            "content": f"📰 每日世界新闻 - {datetime.date.today()}\n"
+        })
+
         for i, article in enumerate(articles, 1):
-            img = article.get("image", "")
+            title = html_module.escape(article["title"])
             link = article["link"]
             source = article["source"]
-            title = article["title"]
             summary = article.get("description", "")[:100]
 
-            lines.append(f"{i}. **{source}**")
-            lines.append(f"[{title}]({link})")
+            # Title with link
+            elements.append({
+                "tag": "markdown",
+                "content": f"**{i}. [{source}] [{title}]({link})**"
+            })
+
+            # Summary
             if summary:
-                lines.append(f"{summary}")
-            if img:
-                lines.append(f"![news]({img})")
-            lines.append("")
+                elements.append({
+                    "tag": "markdown",
+                    "content": summary
+                })
+
+            # Divider
+            elements.append({"tag": "div", "divider_style": 0})
 
         payload = {
-            "msg_type": "post",
-            "content": {
-                "post": {
-                    "zh_cn": {
-                        "title": "每日世界新闻",
-                        "content": [
-                            [{"tag": "text", "text": "\n".join(lines)}]
-                        ]
-                    }
-                }
+            "msg_type": "interactive",
+            "card": {
+                "config": {"wide_screen_mode": True},
+                "header": {
+                    "title": {"content": "每日世界新闻", "tag": "plain_text"},
+                    "template": {"value": "blue", "tag": "plain_text"}
+                },
+                "elements": elements
             }
         }
 
@@ -277,16 +315,61 @@ def send_to_feishu(webhook_url, articles):
                 print("Feishu notification sent successfully!")
             else:
                 print(f"Feishu API error: {result}")
+                # Fallback to post format
+                _send_post_format(webhook_url, articles)
         else:
             print(f"Feishu HTTP error: {response.status_code}")
+            _send_post_format(webhook_url, articles)
 
+    except Exception as e:
+        print(f"Failed to send Feishu notification: {e}")
+        _send_post_format(webhook_url, articles)
+
+
+def _send_post_format(webhook_url, articles):
+    """Fallback: send simple post format"""
+    import requests
+
+    lines = [f"📰 每日世界新闻 - {datetime.date.today()}\n"]
+    for i, article in enumerate(articles, 1):
+        title = article["title"]
+        link = article["link"]
+        source = article["source"]
+        summary = article.get("description", "")[:100]
+
+        lines.append(f"{i}. **{source}**")
+        lines.append(f"{title}")
+        if summary:
+            lines.append(f"{summary}")
+        lines.append("")
+
+    payload = {
+        "msg_type": "post",
+        "content": {
+            "post": {
+                "zh_cn": {
+                    "title": "每日世界新闻",
+                    "content": [
+                        [{"tag": "text", "text": "\n".join(lines)}]
+                    ]
+                }
+            }
+        }
+    }
+
+    try:
+        response = requests.post(webhook_url, json=payload, timeout=15)
+        if response.status_code == 200:
+            result = response.json()
+            if result.get("code") == 0 or result.get("StatusCode") == 0:
+                print("Feishu notification sent (post format)!")
     except Exception as e:
         print(f"Failed to send Feishu notification: {e}")
 
 
 def main():
     print("=" * 50)
-    print("📰 Daily World News Digest")
+    print("📰 每日世界新闻")
     print("=" * 50)
 
     webhook_url = os.environ.get("FEISHU_WEBHOOK", "")
@@ -303,6 +386,9 @@ def main():
     print(f"\nTop {len(top_news)} news selected:")
     for i, article in enumerate(top_news, 1):
         print(f"  {i}. {article['source']}: {article['title'][:60]}...")
+
+    print("\nTranslating English articles...")
+    top_news = translate_articles(top_news)
 
     print("\nGenerating HTML...")
     generate_html(top_news, "daily_news.html")

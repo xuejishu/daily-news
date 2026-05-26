@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每日世界新闻 - 预览</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        .header { text-align: center; padding: 30px 20px; color: white; }
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.2); }
+        .header .date { font-size: 1.1em; opacity: 0.9; }
+        .news-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            transition: transform 0.3s ease;
+            align-items: flex-start;
+        }
+        .news-card:hover { transform: translateY(-3px); }
+        .news-number {
+            font-size: 2em; font-weight: bold; color: #667eea; min-width: 50px; text-align: center; line-height: 1;
+        }
+        .news-content { flex: 1; }
+        .news-header { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+        .source-badge {
+            font-size: 0.75em; padding: 3px 10px; border-radius: 20px; font-weight: 600; white-space: nowrap;
+        }
+        .source-en { background: #e3f2fd; color: #1565c0; }
+        .source-zh { background: #fce4ec; color: #c62828; }
+        .news-header h2 { font-size: 1.2em; margin: 0; line-height: 1.4; }
+        .news-header h2 a { color: #2d3748; text-decoration: none; }
+        .news-header h2 a:hover { color: #667eea; }
+        .news-summary { color: #718096; line-height: 1.6; margin-bottom: 12px; font-size: 0.95em; }
+        .news-footer { display: flex; justify-content: space-between; align-items: center; font-size: 0.85em; }
+        .news-time { color: #a0aec0; }
+        .read-more { color: #667eea; text-decoration: none; font-weight: 500; }
+        .news-image {
+            width: 140px; height: 100px; border-radius: 10px; overflow: hidden; flex-shrink: 0;
+            background: #f7fafc; display: flex; align-items: center; justify-content: center;
+        }
+        .news-image img { width: 100%; height: 100%; object-fit: cover; }
+        .news-img-placeholder { font-size: 2.5em; }
+        .footer { text-align: center; color: rgba(255,255,255,0.8); padding: 20px; font-size: 0.9em; }
+        @media (max-width: 600px) {
+            .news-card { flex-direction: column; }
+            .news-image { width: 100%; height: 150px; }
+            .header h1 { font-size: 1.8em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📰 每日世界新闻</h1>
+            <div class="date">2026年05月26日（预览）</div>
+        </div>
+
+        <div class="news-card">
+            <div class="news-number">1</div>
+            <div class="news-content">
+                <div class="news-header">
+                    <span class="source-badge source-en">BBC News</span>
+                    <h2><a href="#">Global Climate Summit Reaches Historic Agreement on Carbon Emissions</a></h2>
+                </div>
+                <p class="news-summary">World leaders have reached a landmark agreement to reduce carbon emissions by 50% by 2030, marking the most ambitious climate deal in history...</p>
+                <div class="news-footer">
+                    <span class="news-time">2 hours ago</span>
+                    <a href="#" class="read-more">阅读全文 →</a>
+                </div>
+            </div>
+            <div class="news-image">
+                <img src="https://picsum.photos/seed/climate/280/200" alt="">
+            </div>
+        </div>
+
+        <div class="news-card">
+            <div class="news-number">2</div>
+            <div class="news-content">
+                <div class="news-header">
+                    <span class="source-badge source-zh">澎湃新闻</span>
+                    <h2><a href="#">中国成功发射新一代北斗导航卫星</a></h2>
+                </div>
+                <p class="news-summary">中国在西昌卫星发射中心成功将新一代北斗导航卫星送入预定轨道，将进一步增强北斗系统的服务能力和精度...</p>
+                <div class="news-footer">
+                    <span class="news-time">3小时前</span>
+                    <a href="#" class="read-more">阅读全文 →</a>
+                </div>
+            </div>
+            <div class="news-image">
+                <img src="https://picsum.photos/seed/satellite/280/200" alt="">
+            </div>
+        </div>
+
+        <div class="news-card">
+            <div class="news-number">3</div>
+            <div class="news-content">
+                <div class="news-header">
+                    <span class="source-badge source-en">Al Jazeera</span>
+                    <h2><a href="#">AI Regulation Framework Adopted by European Union Member States</a></h2>
+                </div>
+                <p class="news-summary">The European Union has officially adopted a comprehensive AI regulation framework that sets global standards for artificial intelligence development...</p>
+                <div class="news-footer">
+                    <span class="news-time">5 hours ago</span>
+                    <a href="#" class="read-more">阅读全文 →</a>
+                </div>
+            </div>
+            <div class="news-image">
+                <img src="https://picsum.photos/seed/ai/280/200" alt="">
+            </div>
+        </div>
+
+        <div class="news-card">
+            <div class="news-number">4</div>
+            <div class="news-content">
+                <div class="news-header">
+                    <span class="source-badge source-zh">BBC中文</span>
+                    <h2><a href="#">全球芯片供应链面临重大调整</a></h2>
+                </div>
+                <p class="news-summary">随着各国加大对半导体产业的投入，全球芯片供应链正经历十年来最大的结构调整，多家科技巨头宣布新的制造计划...</p>
+                <div class="news-footer">
+                    <span class="news-time">4小时前</span>
+                    <a href="#" class="read-more">阅读全文 →</a>
+                </div>
+            </div>
+            <div class="news-image">
+                <img src="https://picsum.photos/seed/chip/280/200" alt="">
+            </div>
+        </div>
+
+        <div class="news-card">
+            <div class="news-number">5</div>
+            <div class="news-content">
+                <div class="news-header">
+                    <span class="source-badge source-en">DW</span>
+                    <h2><a href="#">Renewable Energy Investment Surpasses Fossil Fuels for First Time</a></h2>
+                </div>
+                <p class="news-summary">Global investment in renewable energy has exceeded fossil fuel spending for the first time, according to a new report from the International Energy Agency...</p>
+                <div class="news-footer">
+                    <span class="news-time">6 hours ago</span>
+                    <a href="#" class="read-more">阅读全文 →</a>
+                </div>
+            </div>
+            <div class="news-image">
+                <img src="https://picsum.photos/seed/solar/280/200" alt="">
+            </div>
+        </div>
+
+        <div class="news-card">
+            <div class="news-number">6</div>
+            <div class="news-content">
+                <div class="news-header">
+                    <span class="source-badge source-zh">36氪</span>
+                    <h2><a href="#">2026年全球科技趋势：空间经济崛起</a></h2>
+                </div>
+                <p class="news-summary">随着商业航天成本持续下降，太空旅游、太空制造等新兴领域正在形成新的经济增长点，多家企业宣布太空计划...</p>
+                <div class="news-footer">
+                    <span class="news-time">1小时前</span>
+                    <a href="#" class="read-more">阅读全文 →</a>
+                </div>
+            </div>
+            <div class="news-image">
+                <img src="https://picsum.photos/seed/space/280/200" alt="">
+            </div>
+        </div>
+
+        <div class="news-card">
+            <div class="news-number">7</div>
+            <div class="news-content">
+                <div class="news-header">
+                    <span class="source-badge source-en">Reuters</span>
+                    <h2><a href="#">UN Security Council Votes on New Peacekeeping Mission</a></h2>
+                </div>
+                <p class="news-summary">The UN Security Council has approved a new peacekeeping mission with a mandate to monitor ceasefire agreements in multiple regions...</p>
+                <div class="news-footer">
+                    <span class="news-time">7 hours ago</span>
+                    <a href="#" class="read-more">阅读全文 →</a>
+                </div>
+            </div>
+            <div class="news-image">
+                <img src="https://picsum.photos/seed/un/280/200" alt="">
+            </div>
+        </div>
+
+        <div class="news-card">
+            <div class="news-number">8</div>
+            <div class="news-content">
+                <div class="news-header">
+                    <span class="source-badge source-zh">界面新闻</span>
+                    <h2><a href="#">新能源汽车销量创历史新高</a></h2>
+                </div>
+                <p class="news-summary">今年前四个月新能源汽车销量同比增长超过40%，渗透率首次突破50%，标志着传统燃油车加速退出历史舞台...</p>
+                <div class="news-footer">
+                    <span class="news-time">2小时前</span>
+                    <a href="#" class="read-more">阅读全文 →</a>
+                </div>
+            </div>
+            <div class="news-image">
+                <img src="https://picsum.photos/seed/car/280/200" alt="">
+            </div>
+        </div>
+
+        <div class="news-card">
+            <div class="news-number">9</div>
+            <div class="news-content">
+                <div class="news-header">
+                    <span class="source-badge source-en">The Guardian</span>
+                    <h2><a href="#">Ocean Cleanup Project Removes Record Amount of Plastic from Pacific</a></h2>
+                </div>
+                <p class="news-summary">The Ocean Cleanup project has removed over 10 million kilograms of plastic waste from the Great Pacific Garbage Patch this year...</p>
+                <div class="news-footer">
+                    <span class="news-time">8 hours ago</span>
+                    <a href="#" class="read-more">阅读全文 →</a>
+                </div>
+            </div>
+            <div class="news-image">
+                <img src="https://picsum.photos/seed/ocean/280/200" alt="">
+            </div>
+        </div>
+
+        <div class="news-card">
+            <div class="news-number">10</div>
+            <div class="news-content">
+                <div class="news-header">
+                    <span class="source-badge source-zh">澎湃新闻</span>
+                    <h2><a href="#">量子计算机实现重大突破</a></h2>
+                </div>
+                <p class="news-summary">中国科研团队成功研制出1024量子比特的量子计算机，在特定任务上的运算速度比经典超级计算机快百万倍...</p>
+                <div class="news-footer">
+                    <span class="news-time">5小时前</span>
+                    <a href="#" class="read-more">阅读全文 →</a>
+                </div>
+            </div>
+            <div class="news-image">
+                <img src="https://picsum.photos/seed/quantum/280/200" alt="">
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Generated on 2026-05-26 09:00:00 (预览页面)</p>
+        </div>
+    </div>
+</body>
+</html>
