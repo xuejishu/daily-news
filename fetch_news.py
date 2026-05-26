@@ -231,22 +231,31 @@ def generate_html(articles, output_file):
 
 
 def send_to_feishu(webhook_url, articles):
-    """Send news summary to Feishu webhook"""
+    """Send news to Feishu webhook"""
     if not webhook_url:
         print("Warning: No FEISHU_WEBHOOK set. Skipping notification.")
         return
 
-    lines = [f"**📰 每日世界新闻 - {datetime.date.today()}**\n"]
-    for i, article in enumerate(articles, 1):
-        lines.append(f"{i}. **{article['source']}**\n{article['title']}")
-        if article.get("description"):
-            lines.append(f"   {article['description'][:100]}")
-        lines.append("")
-
-    content = "\n".join(lines)
-
     try:
         import requests
+
+        # Build title lines for each news item
+        lines = [f"📰 每日世界新闻 - {datetime.date.today()}\n"]
+        for i, article in enumerate(articles, 1):
+            img = article.get("image", "")
+            link = article["link"]
+            source = article["source"]
+            title = article["title"]
+            summary = article.get("description", "")[:100]
+
+            lines.append(f"{i}. **{source}**")
+            lines.append(f"[{title}]({link})")
+            if summary:
+                lines.append(f"{summary}")
+            if img:
+                lines.append(f"![news]({img})")
+            lines.append("")
+
         payload = {
             "msg_type": "post",
             "content": {
@@ -254,13 +263,14 @@ def send_to_feishu(webhook_url, articles):
                     "zh_cn": {
                         "title": "每日世界新闻",
                         "content": [
-                            [{"tag": "text", "text": content}]
+                            [{"tag": "text", "text": "\n".join(lines)}]
                         ]
                     }
                 }
             }
         }
-        response = requests.post(webhook_url, json=payload, timeout=10)
+
+        response = requests.post(webhook_url, json=payload, timeout=15)
         if response.status_code == 200:
             result = response.json()
             if result.get("code") == 0 or result.get("StatusCode") == 0:
@@ -269,6 +279,7 @@ def send_to_feishu(webhook_url, articles):
                 print(f"Feishu API error: {result}")
         else:
             print(f"Feishu HTTP error: {response.status_code}")
+
     except Exception as e:
         print(f"Failed to send Feishu notification: {e}")
 
