@@ -17,6 +17,42 @@ import feedparser
 import html as html_module
 
 
+def traditional_to_simplified(text):
+    """Convert Traditional Chinese to Simplified Chinese"""
+    try:
+        from zhconv import convert
+        return convert(text, 'zh-cn')
+    except ImportError:
+        # Fallback: simple character mapping
+        mapping = {
+            "聞": "闻", "報": "报", "東": "东", "亞": "亚", "業": "业",
+            "絲": "丝", "樂": "乐", "義": "义", "舉": "举", "飯": "饭",
+            "體": "体", "國": "国", "機": "机", "門": "门", "馬": "马",
+            "華": "华", "發": "发", "為": "为", "後": "后", "複": "复",
+            "裡": "里", "麼": "么", "無": "无", "與": "与", "於": "于",
+            "時": "时", "間": "间", "點": "点", "說": "说", "會": "会",
+            "過": "过", "這": "这", "樣": "样", "個": "个", "來": "来",
+            "還": "还", "對": "对", "題": "题", "導": "导", "線": "线",
+            "網": "网", "聯": "联", "電": "电", "視": "视", "台": "台",
+            "央": "央", "廣": "广", "播": "播", "總": "总", "香": "香",
+            "港": "港", "澳": "澳", "臺": "台", "灣": "湾", "簡": "简",
+            "種": "种", "們": "们", "關": "关", "鍵": "键", "長": "长",
+            "路": "路", "連": "连", "接": "接", "開": "开", "始": "始",
+            "結": "结", "束": "束", "果": "果", "論": "论", "現": "现",
+            "生": "生", "布": "布", "表": "表", "行": "行", "動": "动",
+            "態": "态", "變": "变", "化": "化", "更": "更", "轉": "转",
+            "型": "型", "升": "升", "級": "级", "創": "创", "新": "新",
+            "技": "技", "術": "术", "能": "能", "提": "提", "降": "降",
+            "低": "低", "增": "增", "加": "加", "減": "减", "少": "少",
+            "緩": "缓", "快": "快", "速": "速", "推": "推", "進": "进",
+            "實": "实", "施": "施", "落": "落", "展": "展", "完": "完",
+            "成": "成", "持": "持", "續": "续", "規": "规", "模": "模",
+            "擴": "扩", "大": "大", "縮": "缩", "小": "小", "優": "优",
+            "調": "调", "整": "整", "局": "局", "置": "置",
+        }
+        return "".join(mapping.get(c, c) for c in text)
+
+
 # RSS Feeds - Chinese sources only
 RSS_FEEDS = [
     ("央视新闻", "https://rw2-cctvnews-rss-mbp.pages.dev/rss.xml"),
@@ -126,7 +162,7 @@ def curate_top_news(articles, count=MAX_NEWS):
 
 
 def translate_articles(articles):
-    """Translate English articles to Simplified Chinese"""
+    """Translate English to Simplified Chinese, and convert Traditional to Simplified"""
     translated = []
     for article in articles:
         title = article["title"]
@@ -138,6 +174,10 @@ def translate_articles(articles):
             title = translate_text(title)
             if desc and not any("\u4e00" <= c <= "\u9fff" for c in desc):
                 desc = translate_text(desc)
+
+        # Convert Traditional Chinese to Simplified
+        title = traditional_to_simplified(title)
+        desc = traditional_to_simplified(desc)
 
         article["title"] = title
         article["description"] = desc
@@ -258,7 +298,7 @@ def generate_html(articles, output_file):
 
 
 def send_to_feishu(webhook_url, articles):
-    """Send news to Feishu webhook using interactive card format"""
+    """Send news to Feishu webhook using post format with markdown links"""
     if not webhook_url:
         print("Warning: No FEISHU_WEBHOOK set. Skipping notification.")
         return
@@ -266,45 +306,32 @@ def send_to_feishu(webhook_url, articles):
     try:
         import requests
 
-        elements = []
-
-        # Header
-        elements.append({
-            "tag": "markdown",
-            "content": f"📰 每日世界新闻 - {datetime.date.today()}\n"
-        })
-
+        # Build content lines with markdown links
+        content_lines = []
         for i, article in enumerate(articles, 1):
-            title = html_module.escape(article["title"])
+            title = article["title"]
             link = article["link"]
             source = article["source"]
             summary = article.get("description", "")[:100]
 
-            # Title with link
-            elements.append({
-                "tag": "markdown",
-                "content": f"**{i}. [{source}] [{title}]({link})**"
-            })
-
-            # Summary
+            line = f"**{i}. [{source}](<{link}>)**\n{title}"
             if summary:
-                elements.append({
-                    "tag": "markdown",
-                    "content": summary
-                })
+                line += f"\n{summary}"
+            content_lines.append(line)
 
-            # Divider
-            elements.append({"tag": "div", "divider_style": 0})
+        full_text = f"📰 每日世界新闻 - {datetime.date.today()}\n\n" + "\n\n".join(content_lines)
 
         payload = {
-            "msg_type": "interactive",
-            "card": {
-                "config": {"wide_screen_mode": True},
-                "header": {
-                    "title": {"content": "每日世界新闻", "tag": "plain_text"},
-                    "template": {"value": "blue", "tag": "plain_text"}
-                },
-                "elements": elements
+            "msg_type": "post",
+            "content": {
+                "post": {
+                    "zh_cn": {
+                        "title": "每日世界新闻",
+                        "content": [
+                            [{"tag": "text", "text": full_text}]
+                        ]
+                    }
+                }
             }
         }
 
@@ -315,54 +342,9 @@ def send_to_feishu(webhook_url, articles):
                 print("Feishu notification sent successfully!")
             else:
                 print(f"Feishu API error: {result}")
-                # Fallback to post format
-                _send_post_format(webhook_url, articles)
         else:
             print(f"Feishu HTTP error: {response.status_code}")
-            _send_post_format(webhook_url, articles)
 
-    except Exception as e:
-        print(f"Failed to send Feishu notification: {e}")
-        _send_post_format(webhook_url, articles)
-
-
-def _send_post_format(webhook_url, articles):
-    """Fallback: send simple post format"""
-    import requests
-
-    lines = [f"📰 每日世界新闻 - {datetime.date.today()}\n"]
-    for i, article in enumerate(articles, 1):
-        title = article["title"]
-        link = article["link"]
-        source = article["source"]
-        summary = article.get("description", "")[:100]
-
-        lines.append(f"{i}. **{source}**")
-        lines.append(f"{title}")
-        if summary:
-            lines.append(f"{summary}")
-        lines.append("")
-
-    payload = {
-        "msg_type": "post",
-        "content": {
-            "post": {
-                "zh_cn": {
-                    "title": "每日世界新闻",
-                    "content": [
-                        [{"tag": "text", "text": "\n".join(lines)}]
-                    ]
-                }
-            }
-        }
-    }
-
-    try:
-        response = requests.post(webhook_url, json=payload, timeout=15)
-        if response.status_code == 200:
-            result = response.json()
-            if result.get("code") == 0 or result.get("StatusCode") == 0:
-                print("Feishu notification sent (post format)!")
     except Exception as e:
         print(f"Failed to send Feishu notification: {e}")
 

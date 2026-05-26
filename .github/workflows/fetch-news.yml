@@ -21,7 +21,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install feedparser requests beautifulsoup4
+          pip install feedparser requests beautifulsoup4 zhconv
 
       - name: Fetch news and send to Feishu
         timeout-minutes: 10
